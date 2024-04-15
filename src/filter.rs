@@ -52,9 +52,5 @@ impl Filter {
         self.state.add_state_vector(&(kalman_gain * measurement_residual));
         self.covariance = (SMatrix::identity() - kalman_gain * observation_jacobian) * self.covariance;
     }
-
-    pub fn set_position(&mut self, position: Vector3<f64>) {
-        self.state.position = position;
-    }
 }
 

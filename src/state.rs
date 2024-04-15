@@ -54,7 +54,7 @@ impl State {
         }
     }
 
-    pub fn state_transition_jacobian(&self, acceleration: Vector3<f64>, gyro: Vector3<f64>, delta_t: Duration) -> SMatrix<f64, N, N> {
+    pub fn state_transition_jacobian(&self, _: Vector3<f64>, gyro: Vector3<f64>, delta_t: Duration) -> SMatrix<f64, N, N> {
         let mut jacobian = SMatrix::<f64, N, N>::zeros();
 
         jacobian.fixed_view_mut::<3, 3>(0, 0).fill_with_identity();

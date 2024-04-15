@@ -1,6 +1,5 @@
 use std::error::Error;
 use std::fs;
-use std::io::Write;
 
 use saros_imu::process_file;
 
@@ -13,11 +12,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let states = process_file(file_data);
 
     let mut csv_writer = csv::WriterBuilder::new()
-        .from_path("output.csv")
+        .from_path("output_flight.csv")
         .expect("Couldn't create CSV Writer");
 
     // First ~250 values are bad
-    for state in &states[250..] {
+    for state in &states[250..15000] {
         csv_writer.serialize::<CsvRow>(state.clone().into())?;
     }
 
