@@ -110,10 +110,10 @@ fn read_imu_message(value: &mut DataWalker) -> Result<Message, ParseError> {
     let time = read_timestamp(value)?;
     let accel_x = value.read::<f32>().ok_or(ParseError)?;
     let accel_y = value.read::<f32>().ok_or(ParseError)?;
-    let accel_z = value.read::<f32>().ok_or(ParseError)?;
+    let accel_z = -value.read::<f32>().ok_or(ParseError)?;
     let gyro_x = value.read::<f32>().ok_or(ParseError)?;
     let gyro_y = value.read::<f32>().ok_or(ParseError)?;
-    let gyro_z = value.read::<f32>().ok_or(ParseError)?;
+    let gyro_z = -value.read::<f32>().ok_or(ParseError)?;
 
     Ok(Message::Imu {
         time,
@@ -124,9 +124,9 @@ fn read_imu_message(value: &mut DataWalker) -> Result<Message, ParseError> {
 
 fn read_slow_message(value: &mut DataWalker) -> Result<Message, ParseError> {
     let time = read_timestamp(value)?;
-    let magnetic_x = value.read::<f32>().ok_or(ParseError)?;
+    let magnetic_x = -value.read::<f32>().ok_or(ParseError)?;
     let magnetic_y = value.read::<f32>().ok_or(ParseError)?;
-    let magnetic_z = value.read::<f32>().ok_or(ParseError)?;
+    let magnetic_z = -value.read::<f32>().ok_or(ParseError)?;
     value.skip(4);
     value.skip(4);
     value.skip(4 * 10);

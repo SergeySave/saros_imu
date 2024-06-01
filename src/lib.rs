@@ -1,3 +1,4 @@
+use ::time::{Date, Month};
 use map_3d::{Ellipsoid, geodetic2ecef};
 use nalgebra::Vector3;
 
@@ -11,6 +12,7 @@ mod time;
 mod data_walker;
 pub mod state;
 mod filter;
+mod jacobian;
 
 pub const ELLIPSOID: Ellipsoid = Ellipsoid::WGS84;
 
@@ -19,6 +21,7 @@ pub fn process_file(file_data: Vec<u8>) -> Vec<State> {
     let mut filter = Filter::new();
     let mut result = vec![];
     let mut counter = 0usize;
+    // let mut initialized = false;
 
     for message in messages {
         match message {
@@ -31,10 +34,20 @@ pub fn process_file(file_data: Vec<u8>) -> Vec<State> {
             },
             Message::Gps { latitude, longitude, altitude, .. } => {
                 let (x, y, z) = geodetic2ecef(latitude, longitude, altitude, ELLIPSOID);
+                // if !initialized {
+                //     initialized = true;
+                //     filter.set_position(Vector3::new(x, y, z));
+                // }
                 filter.observe_gps(Vector3::new(x, y, z));
             }
-            _ => {}
+            Message::Slow { magnetic, .. } => {
+                filter.observe_magnetometer(magnetic, Date::from_calendar_date(2024, Month::April, 8).unwrap());
+            }
         }
+
+        // if result.len() >= 10000 {
+        //     break
+        // }
     }
 
     return result;
