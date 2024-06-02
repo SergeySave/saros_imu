@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .expect("Couldn't create CSV Writer");
 
     // First ~250 values are bad
-    for state in &states[250..15000] {
+    for state in &states[0..15000] {
         csv_writer.serialize::<CsvRow>(state.clone().into())?;
     }
 
