@@ -1,12 +1,13 @@
+use std::f64::consts::PI;
 use std::time::Duration;
 use ::time::{Date, Month};
-use map_3d::{Ellipsoid, geodetic2ecef};
+use map_3d::{Ellipsoid, geodetic2ecef, geodetic2enu};
 use nalgebra::Vector3;
 
 use crate::data_walker::DataWalker;
 // use crate::filter::Filter;
 use crate::message::Message;
-use crate::state::State;
+use crate::state::{Position, State};
 
 mod message;
 mod time;
@@ -15,19 +16,19 @@ pub mod state;
 // mod filter;
 // mod jacobian;
 
-// pub const ELLIPSOID: Ellipsoid = Ellipsoid::WGS84;
+pub const ELLIPSOID: Ellipsoid = Ellipsoid::WGS84;
 
 pub const STEP_TIME: Duration = Duration::from_millis(5);
 
 pub const INITIAL_ACCEL_FIX: f64 = 1.0 / (200.0 * 60.0 * 10.0); // 1 per 10 minutes
 pub const INITIAL_ACCEL_UPDATE: f64 = 1.0 / (200.0 * 1.0); // 1 per 1 second
-pub const STABLE_ACCEL_FIX: f64 = 1.0 / (200.0); // 1 per 1 second
-pub const STABLE_ACCEL_UPDATE: f64 = 1.0 / (200.0 * 60.0 * 2.0); // 1 per 2 minutes
+pub const STABLE_ACCEL_FIX: f64 = 1.0 / (200.0 * 5.0); // 1 per 5 seconds
+pub const STABLE_ACCEL_UPDATE: f64 = 1.0 / (200.0 * 60.0 * 10.0); // 1 per 10 minutes
 
 pub const INITIAL_MAGNETO_FIX: f64 = 1.0 / (60.0 * 30.0); // 1 per 30 minutes
 pub const INITIAL_MAGNETO_UPDATE: f64 = 1.0 / (3.0); // 1 per 3 seconds
-pub const STABLE_MAGNETO_FIX: f64 = 1.0 / (15.0); // 1 per 15 seconds
-pub const STABLE_MAGNETO_UPDATE: f64 = 1.0 / (60.0 * 6.0); // 1 per 6 minutes
+pub const STABLE_MAGNETO_FIX: f64 = 1.0 / (60.0); // 1 per 60 seconds
+pub const STABLE_MAGNETO_UPDATE: f64 = 1.0 / (60.0 * 10.0); // 1 per 10 minutes
 
 const fn accel_fix(count: usize) -> f64 {
     if count < 2000 {
@@ -50,35 +51,51 @@ const fn magneto_fix(count: usize) -> f64 {
         STABLE_MAGNETO_FIX
     }
 }
-const fn magneto_update(count: usize) -> f64 {
+fn magneto_update(count: usize) -> f64 {
     if count < 2000 {
-        INITIAL_MAGNETO_UPDATE
+        1.0 / ((count + 1) as f64)
     } else {
         STABLE_MAGNETO_UPDATE
     }
 }
 
-pub fn process_file(file_data: Vec<u8>) -> Vec<State> {
+pub fn process_file(file_data: Vec<u8>) -> (Vec<State>, Vec<Position>) {
     let messages = preprocess(file_data);
     // let mut filter = Filter::new();
     let mut state = State::new();
     let mut result = vec![];
+    let mut positions = vec![];
     let mut counter = 0usize;
-    // let mut initialized = false;
+    let mut initialized = false;
+    let mut initial_lat = 0.0;
+    let mut initial_lon = 0.0;
 
     for message in messages {
         match message {
-            Message::Imu { acceleration, gyro, .. } => {
+            Message::Imu { acceleration, gyro, time, .. } => {
                 state.update_gyro(gyro, STEP_TIME);
                 state.update_accel(acceleration, accel_fix(result.len()), accel_update(result.len()));
                 // filter.step_imu(acceleration, gyro);
                 if counter == 0 {
-                    result.push(state.clone());
+                    result.push(state.cleanup());
+                    // println!("{:?}", time);
                 }
                 counter = (counter + 1) % 200;
             },
             Message::Gps { latitude, longitude, altitude, .. } => {
-                // let (x, y, z) = geodetic2ecef(latitude, longitude, altitude, ELLIPSOID);
+                if !initialized {
+                    initialized = true;
+                    initial_lat = latitude;
+                    initial_lon = longitude;
+                }
+                let (_, _, earth_curve) = geodetic2enu(latitude, longitude, 0.0, initial_lat, initial_lon, 0.0, ELLIPSOID);
+                let (e, n, u) = geodetic2enu(latitude, longitude, altitude, initial_lat, initial_lon, 0.0, ELLIPSOID);
+                positions.push(Position {
+                    index: result.len(),
+                    x: e,
+                    y: n,
+                    z: u - earth_curve,
+                });
                 // if !initialized {
                 //     initialized = true;
                 //     filter.set_position(Vector3::new(x, y, z));
@@ -96,7 +113,7 @@ pub fn process_file(file_data: Vec<u8>) -> Vec<State> {
         // }
     }
 
-    return result;
+    return (result, positions);
 }
 
 fn preprocess(file_data: Vec<u8>) -> Vec<Message> {

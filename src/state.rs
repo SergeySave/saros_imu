@@ -2,8 +2,9 @@ use std::time::Duration;
 
 use igrf::declination;
 use map_3d::ecef2geodetic;
-use nalgebra::{Matrix3, Normed, Quaternion, SMatrix, SVector, UnitQuaternion, Vector3, Vector4};
+use nalgebra::{Matrix3, Normed, Quaternion, Rotation3, SMatrix, SVector, UnitQuaternion, Vector3, Vector4};
 use serde::de::Unexpected::Unit;
+use serde::Serialize;
 use time::Date;
 
 // use crate::ELLIPSOID;
@@ -32,6 +33,14 @@ pub struct State {
     // pub gyro_bias: Vector3<f64>,
     // pub last_gyro: Vector3<f64>,
     // pub gravity: Vector3<f64>,
+}
+
+#[derive(Clone, Serialize)]
+pub struct Position {
+    pub index: usize,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
 
 impl State {
@@ -77,6 +86,29 @@ impl State {
         let update_rotation = UnitQuaternion::from_scaled_axis(rotation.inverse().scaled_axis() * update);
         self.orientation = fix_rotation * self.orientation;
         self.magneto = update_rotation * self.magneto;
+    }
+
+    pub fn cleanup(&self) -> Self {
+
+        // let z = self.gravity;
+        // let y = self.magneto;
+        // let x = y.cross(&z);
+        // let y = x.cross(&z);
+
+        // let mut to_xyz = Matrix3::default();
+        // to_xyz.column_mut(0).copy_from(&x);
+        // to_xyz.column_mut(1).copy_from(&y);
+        // to_xyz.column_mut(2).copy_from(&z);
+        // let from_xyz = to_xyz.try_inverse().unwrap();
+        // let from_xyz = UnitQuaternion::from_rotation_matrix(&Rotation3::from_matrix_unchecked(from_xyz));
+
+        Self {
+            orientation: self.orientation,
+            gravity: self.gravity,
+            magneto: self.magneto,
+            gravity_angle: self.gravity_angle,
+            magneto_angle: self.magneto_angle,
+        }
     }
 
     // pub fn propagate(&self, acceleration: Vector3<f64>, gyro: Vector3<f64>, delta_t: Duration) -> Self {
