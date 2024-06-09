@@ -22,12 +22,12 @@ pub const STEP_TIME: Duration = Duration::from_millis(5);
 
 pub const INITIAL_ACCEL_FIX: f64 = 1.0 / (200.0 * 60.0 * 10.0); // 1 per 10 minutes
 pub const INITIAL_ACCEL_UPDATE: f64 = 1.0 / (200.0 * 1.0); // 1 per 1 second
-pub const STABLE_ACCEL_FIX: f64 = 1.0 / (200.0 * 5.0); // 1 per 5 seconds
+pub const STABLE_ACCEL_FIX: f64 = 1.0 / (200.0 * 20.0); // 1 per 20 seconds
 pub const STABLE_ACCEL_UPDATE: f64 = 1.0 / (200.0 * 60.0 * 10.0); // 1 per 10 minutes
 
 pub const INITIAL_MAGNETO_FIX: f64 = 1.0 / (60.0 * 30.0); // 1 per 30 minutes
 pub const INITIAL_MAGNETO_UPDATE: f64 = 1.0 / (3.0); // 1 per 3 seconds
-pub const STABLE_MAGNETO_FIX: f64 = 1.0 / (60.0); // 1 per 60 seconds
+pub const STABLE_MAGNETO_FIX: f64 = 1.0 / (20.0); // 1 per 20 seconds
 pub const STABLE_MAGNETO_UPDATE: f64 = 1.0 / (60.0 * 10.0); // 1 per 10 minutes
 
 const fn accel_fix(count: usize) -> f64 {
@@ -66,9 +66,9 @@ pub fn process_file(file_data: Vec<u8>) -> (Vec<State>, Vec<ExtraOutput>) {
     let mut result = vec![];
     let mut extra = vec![];
     let mut counter = 0usize;
-    // let mut initialized = false;
-    // let mut initial_lat = 0.0;
-    // let mut initial_lon = 0.0;
+    let mut initialized = false;
+    let mut initial_lat = 0.0;
+    let mut initial_lon = 0.0;
 
     for message in messages {
         match message {
@@ -83,48 +83,43 @@ pub fn process_file(file_data: Vec<u8>) -> (Vec<State>, Vec<ExtraOutput>) {
                 counter = (counter + 1) % 200;
             },
             Message::Gps { latitude, longitude, altitude, .. } => {
-                // if !initialized {
-                //     initialized = true;
-                //     initial_lat = latitude;
-                //     initial_lon = longitude;
-                // }
-                // let (_, _, earth_curve) = geodetic2enu(latitude, longitude, 0.0, initial_lat, initial_lon, 0.0, ELLIPSOID);
-                // let (e, n, u) = geodetic2enu(latitude, longitude, altitude, initial_lat, initial_lon, 0.0, ELLIPSOID);
-                // positions.push(ExtraOutput {
-                //     index: result.len(),
-                //     x: e,
-                //     y: n,
-                //     z: u - earth_curve,
-                // });
-                // if !initialized {
-                //     initialized = true;
-                //     filter.set_position(Vector3::new(x, y, z));
-                // }
-                // filter.observe_gps(Vector3::new(x, y, z));
+                if !initialized {
+                    initialized = true;
+                    initial_lat = latitude;
+                    initial_lon = longitude;
+                }
+                let (_, _, earth_curve) = geodetic2enu(latitude, longitude, 0.0, initial_lat, initial_lon, 0.0, ELLIPSOID);
+                let (e, n, u) = geodetic2enu(latitude, longitude, altitude, initial_lat, initial_lon, 0.0, ELLIPSOID);
+                extra.push(ExtraOutput {
+                    index: result.len(),
+                    x: e,
+                    y: n,
+                    z: u - earth_curve,
+                });
             }
-            Message::Slow { magnetic, temperature,
+            Message::Slow { magnetic, /*temperature,
                 pressure,
                 analog_sensors,
                 battery_voltage,
-                heater_state, .. } => {
+                heater_state,*/ .. } => {
                 state.update_magneto(magnetic, magneto_fix(result.len()), magneto_update(result.len()));
-                extra.push(ExtraOutput {
-                    index: result.len(),
-                    temperature,
-                    pressure,
-                    analog0: analog_sensors[0],
-                    analog1: analog_sensors[1],
-                    analog2: analog_sensors[2],
-                    analog3: analog_sensors[3],
-                    analog4: analog_sensors[4],
-                    analog5: analog_sensors[5],
-                    analog6: analog_sensors[6],
-                    analog7: analog_sensors[7],
-                    analog8: analog_sensors[8],
-                    analog9: analog_sensors[9],
-                    battery_voltage,
-                    heater_state,
-                });
+                // extra.push(ExtraOutput {
+                //     index: result.len(),
+                //     temperature,
+                //     pressure,
+                //     analog0: analog_sensors[0],
+                //     analog1: analog_sensors[1],
+                //     analog2: analog_sensors[2],
+                //     analog3: analog_sensors[3],
+                //     analog4: analog_sensors[4],
+                //     analog5: analog_sensors[5],
+                //     analog6: analog_sensors[6],
+                //     analog7: analog_sensors[7],
+                //     analog8: analog_sensors[8],
+                //     analog9: analog_sensors[9],
+                //     battery_voltage,
+                //     heater_state,
+                // });
                 // filter.observe_magnetometer(magnetic, Date::from_calendar_date(2024, Month::April, 8).unwrap());
             }
         }

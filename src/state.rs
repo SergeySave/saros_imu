@@ -38,20 +38,9 @@ pub struct State {
 #[derive(Clone, Serialize)]
 pub struct ExtraOutput {
     pub index: usize,
-    pub temperature: f64,
-    pub pressure: f64,
-    pub analog0: f64,
-    pub analog1: f64,
-    pub analog2: f64,
-    pub analog3: f64,
-    pub analog4: f64,
-    pub analog5: f64,
-    pub analog6: f64,
-    pub analog7: f64,
-    pub analog8: f64,
-    pub analog9: f64,
-    pub battery_voltage: f64,
-    pub heater_state: bool,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
 
 impl State {
@@ -74,12 +63,12 @@ impl State {
         // -gy, -gx, gz
         // -ay, -ax, az
         //  mx,  my, mz
-        let gyro = UnitQuaternion::from_euler_angles(-gyro.x * duration.as_secs_f64(), gyro.y * duration.as_secs_f64(), gyro.z * duration.as_secs_f64());
+        let gyro = UnitQuaternion::from_euler_angles(-gyro.y * duration.as_secs_f64(), -gyro.x * duration.as_secs_f64(), gyro.z * duration.as_secs_f64());
         self.orientation = gyro * self.orientation;
     }
 
     pub fn update_accel(&mut self, accel: Vector3<f64>, fix: f64, update: f64) {
-        let accel = Vector3::new(-accel.x, accel.y, accel.z);
+        let accel = Vector3::new(-accel.y, -accel.x, accel.z);
         let world = self.orientation * accel;
         let rotation = UnitQuaternion::rotation_between(&world, &self.gravity).unwrap();
         self.gravity_angle = rotation.angle();

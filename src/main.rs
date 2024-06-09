@@ -17,14 +17,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         .expect("Couldn't create CSV Writer");
 
     let mut csv_writer2 = csv::WriterBuilder::new()
-        .from_path("output_extras.csv")
+        .from_path("output_positions.csv")
         .expect("Couldn't create CSV Writer");
 
     // First ~250 values are bad
     for state in &states[0..15000] {
         csv_writer.serialize::<CsvRow>(state.clone().into())?;
     }
-    for position in &positions[0..15000] {
+    for position in positions {
         csv_writer2.serialize::<ExtraOutput>(position.clone())?;
     }
 
