@@ -36,11 +36,22 @@ pub struct State {
 }
 
 #[derive(Clone, Serialize)]
-pub struct Position {
+pub struct ExtraOutput {
     pub index: usize,
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub temperature: f64,
+    pub pressure: f64,
+    pub analog0: f64,
+    pub analog1: f64,
+    pub analog2: f64,
+    pub analog3: f64,
+    pub analog4: f64,
+    pub analog5: f64,
+    pub analog6: f64,
+    pub analog7: f64,
+    pub analog8: f64,
+    pub analog9: f64,
+    pub battery_voltage: f64,
+    pub heater_state: bool,
 }
 
 impl State {

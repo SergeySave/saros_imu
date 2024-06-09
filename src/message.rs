@@ -26,11 +26,11 @@ pub enum Message {
     Slow {
         time: Timestamp,
         magnetic: Vector3<f64>,
-        // temperature: f32,
-        // pressure: f32,
-        // analog_sensors: [f32; 10],
-        // battery_voltage: f32,
-        // heater_state: bool,
+        temperature: f64,
+        pressure: f64,
+        analog_sensors: [f64; 10],
+        battery_voltage: f64,
+        heater_state: bool,
     }
 }
 
@@ -110,10 +110,10 @@ fn read_imu_message(value: &mut DataWalker) -> Result<Message, ParseError> {
     let time = read_timestamp(value)?;
     let accel_x = value.read::<f32>().ok_or(ParseError)?;
     let accel_y = value.read::<f32>().ok_or(ParseError)?;
-    let accel_z = -value.read::<f32>().ok_or(ParseError)?;
+    let accel_z = value.read::<f32>().ok_or(ParseError)?;
     let gyro_x = value.read::<f32>().ok_or(ParseError)?;
     let gyro_y = value.read::<f32>().ok_or(ParseError)?;
-    let gyro_z = -value.read::<f32>().ok_or(ParseError)?;
+    let gyro_z = value.read::<f32>().ok_or(ParseError)?;
 
     Ok(Message::Imu {
         time,
@@ -124,18 +124,26 @@ fn read_imu_message(value: &mut DataWalker) -> Result<Message, ParseError> {
 
 fn read_slow_message(value: &mut DataWalker) -> Result<Message, ParseError> {
     let time = read_timestamp(value)?;
-    let magnetic_x = -value.read::<f32>().ok_or(ParseError)?;
+    let magnetic_x = value.read::<f32>().ok_or(ParseError)?;
     let magnetic_y = value.read::<f32>().ok_or(ParseError)?;
-    let magnetic_z = -value.read::<f32>().ok_or(ParseError)?;
-    value.skip(4);
-    value.skip(4);
-    value.skip(4 * 10);
-    value.skip(4);
-    value.skip(1);
+    let magnetic_z = value.read::<f32>().ok_or(ParseError)?;
+    let ms5611_temperature = value.read::<f32>().ok_or(ParseError)? as f64;
+    let ms5611_pressure = value.read::<f32>().ok_or(ParseError)? as f64;
+    let mut analog_sensors = [0_f64; 10];
+    for sensor in &mut analog_sensors {
+        *sensor = value.read::<f32>().ok_or(ParseError)? as f64;
+    }
+    let battery_voltage = value.read::<f32>().ok_or(ParseError)? as f64;
+    let heater_running = value.read::<u8>().ok_or(ParseError)? != 0;
 
     Ok(Message::Slow {
         time,
         magnetic: Vector3::new(magnetic_x as f64, magnetic_y as f64, magnetic_z as f64),
+        temperature: ms5611_temperature,
+        pressure: ms5611_pressure,
+        analog_sensors,
+        battery_voltage,
+        heater_state: heater_running,
     })
 }
 

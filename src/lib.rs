@@ -7,7 +7,7 @@ use nalgebra::Vector3;
 use crate::data_walker::DataWalker;
 // use crate::filter::Filter;
 use crate::message::Message;
-use crate::state::{Position, State};
+use crate::state::{ExtraOutput, State};
 
 mod message;
 mod time;
@@ -59,16 +59,16 @@ fn magneto_update(count: usize) -> f64 {
     }
 }
 
-pub fn process_file(file_data: Vec<u8>) -> (Vec<State>, Vec<Position>) {
+pub fn process_file(file_data: Vec<u8>) -> (Vec<State>, Vec<ExtraOutput>) {
     let messages = preprocess(file_data);
     // let mut filter = Filter::new();
     let mut state = State::new();
     let mut result = vec![];
-    let mut positions = vec![];
+    let mut extra = vec![];
     let mut counter = 0usize;
-    let mut initialized = false;
-    let mut initial_lat = 0.0;
-    let mut initial_lon = 0.0;
+    // let mut initialized = false;
+    // let mut initial_lat = 0.0;
+    // let mut initial_lon = 0.0;
 
     for message in messages {
         match message {
@@ -83,27 +83,48 @@ pub fn process_file(file_data: Vec<u8>) -> (Vec<State>, Vec<Position>) {
                 counter = (counter + 1) % 200;
             },
             Message::Gps { latitude, longitude, altitude, .. } => {
-                if !initialized {
-                    initialized = true;
-                    initial_lat = latitude;
-                    initial_lon = longitude;
-                }
-                let (_, _, earth_curve) = geodetic2enu(latitude, longitude, 0.0, initial_lat, initial_lon, 0.0, ELLIPSOID);
-                let (e, n, u) = geodetic2enu(latitude, longitude, altitude, initial_lat, initial_lon, 0.0, ELLIPSOID);
-                positions.push(Position {
-                    index: result.len(),
-                    x: e,
-                    y: n,
-                    z: u - earth_curve,
-                });
+                // if !initialized {
+                //     initialized = true;
+                //     initial_lat = latitude;
+                //     initial_lon = longitude;
+                // }
+                // let (_, _, earth_curve) = geodetic2enu(latitude, longitude, 0.0, initial_lat, initial_lon, 0.0, ELLIPSOID);
+                // let (e, n, u) = geodetic2enu(latitude, longitude, altitude, initial_lat, initial_lon, 0.0, ELLIPSOID);
+                // positions.push(ExtraOutput {
+                //     index: result.len(),
+                //     x: e,
+                //     y: n,
+                //     z: u - earth_curve,
+                // });
                 // if !initialized {
                 //     initialized = true;
                 //     filter.set_position(Vector3::new(x, y, z));
                 // }
                 // filter.observe_gps(Vector3::new(x, y, z));
             }
-            Message::Slow { magnetic, .. } => {
+            Message::Slow { magnetic, temperature,
+                pressure,
+                analog_sensors,
+                battery_voltage,
+                heater_state, .. } => {
                 state.update_magneto(magnetic, magneto_fix(result.len()), magneto_update(result.len()));
+                extra.push(ExtraOutput {
+                    index: result.len(),
+                    temperature,
+                    pressure,
+                    analog0: analog_sensors[0],
+                    analog1: analog_sensors[1],
+                    analog2: analog_sensors[2],
+                    analog3: analog_sensors[3],
+                    analog4: analog_sensors[4],
+                    analog5: analog_sensors[5],
+                    analog6: analog_sensors[6],
+                    analog7: analog_sensors[7],
+                    analog8: analog_sensors[8],
+                    analog9: analog_sensors[9],
+                    battery_voltage,
+                    heater_state,
+                });
                 // filter.observe_magnetometer(magnetic, Date::from_calendar_date(2024, Month::April, 8).unwrap());
             }
         }
@@ -113,7 +134,7 @@ pub fn process_file(file_data: Vec<u8>) -> (Vec<State>, Vec<Position>) {
         // }
     }
 
-    return (result, positions);
+    return (result, extra);
 }
 
 fn preprocess(file_data: Vec<u8>) -> Vec<Message> {
