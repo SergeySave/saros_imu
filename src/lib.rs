@@ -70,9 +70,31 @@ pub fn process_file(file_data: Vec<u8>) -> (Vec<State>, Vec<ExtraOutput>) {
     let mut initial_lat = 0.0;
     let mut initial_lon = 0.0;
 
+    let mut last_time: Option<u64> = None;
+    let mut next_output = ExtraOutput::default();
+
     for message in messages {
         match message {
             Message::Imu { acceleration, gyro, time, .. } => {
+                // match last_time {
+                //     None => {
+                //         last_time = Some(1)
+                //     }
+                //     Some(time) => {
+                //         extra.push(next_output);
+                //         last_time = Some(time + 1);
+                //     }
+                // }
+                // next_output = ExtraOutput {
+                //     time: last_time.unwrap() as f64 / 200.0,
+                //     acceleration_x: acceleration.x,
+                //     acceleration_y: acceleration.y,
+                //     acceleration_z: acceleration.z,
+                //     gyro_x: gyro.x,
+                //     gyro_y: gyro.y,
+                //     gyro_z: gyro.z,
+                //     ..ExtraOutput::default()
+                // };
                 state.update_gyro(gyro, STEP_TIME);
                 state.update_accel(acceleration, accel_fix(result.len()), accel_update(result.len()));
                 // filter.step_imu(acceleration, gyro);
@@ -82,26 +104,37 @@ pub fn process_file(file_data: Vec<u8>) -> (Vec<State>, Vec<ExtraOutput>) {
                 }
                 counter = (counter + 1) % 200;
             },
-            Message::Gps { latitude, longitude, altitude, .. } => {
-                if !initialized {
-                    initialized = true;
-                    initial_lat = latitude;
-                    initial_lon = longitude;
-                }
-                let (_, _, earth_curve) = geodetic2enu(latitude, longitude, 0.0, initial_lat, initial_lon, 0.0, ELLIPSOID);
-                let (e, n, u) = geodetic2enu(latitude, longitude, altitude, initial_lat, initial_lon, 0.0, ELLIPSOID);
-                extra.push(ExtraOutput {
-                    index: result.len(),
-                    x: e,
-                    y: n,
-                    z: u - earth_curve,
-                });
+            Message::Gps { latitude, longitude, altitude, speed, .. } => {
+                // next_output.latitude = Some(latitude);
+                // next_output.longitude = Some(longitude);
+                // next_output.altitude = Some(altitude);
+                // next_output.speed = Some(speed);
+                // if last_time.is_none() {
+                //     extra.push(next_output);
+                //     next_output = ExtraOutput::default();
+                // }
+                // if !initialized {
+                //     initialized = true;
+                //     initial_lat = latitude;
+                //     initial_lon = longitude;
+                // }
+                // let (e, n, _) = geodetic2enu(latitude, longitude, 0.0, initial_lat, initial_lon, 0.0, ELLIPSOID);
+                // let (e, n, u) = geodetic2enu(latitude, longitude, altitude, initial_lat, initial_lon, 0.0, ELLIPSOID);
+                // extra.push(ExtraOutput {
+                //     time: result.len() as f64,
+                //     n: e,
+                //     e: n,
+                //     alt: altitude,
+                // });
             }
             Message::Slow { magnetic, /*temperature,
                 pressure,
                 analog_sensors,
                 battery_voltage,
                 heater_state,*/ .. } => {
+                // next_output.magneto_x = Some(magnetic.x);
+                // next_output.magneto_y = Some(magnetic.y);
+                // next_output.magneto_z = Some(magnetic.z);
                 state.update_magneto(magnetic, magneto_fix(result.len()), magneto_update(result.len()));
                 // extra.push(ExtraOutput {
                 //     index: result.len(),

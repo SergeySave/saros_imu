@@ -16,20 +16,22 @@ fn main() -> Result<(), Box<dyn Error>> {
         .from_path("output_flight.csv")
         .expect("Couldn't create CSV Writer");
 
-    let mut csv_writer2 = csv::WriterBuilder::new()
-        .from_path("output_positions.csv")
-        .expect("Couldn't create CSV Writer");
+    // let mut csv_writer2 = csv::WriterBuilder::new()
+    //     .from_path("output_positions.csv")
+    //     .expect("Couldn't create CSV Writer");
 
-    // First ~250 values are bad
     for state in &states[0..15000] {
         csv_writer.serialize::<CsvRow>(state.clone().into())?;
     }
-    for position in positions {
-        csv_writer2.serialize::<ExtraOutput>(position.clone())?;
-    }
+    // for position in positions {
+    //     if position.time > 15010.00 {
+    //         break;
+    //     }
+    //     csv_writer2.serialize::<ExtraOutput>(position.clone())?;
+    // }
 
     csv_writer.flush()?;
-    csv_writer2.flush()?;
+    // csv_writer2.flush()?;
     
     Ok(())
 }

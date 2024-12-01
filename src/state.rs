@@ -35,12 +35,25 @@ pub struct State {
     // pub gravity: Vector3<f64>,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Default)]
 pub struct ExtraOutput {
-    pub index: usize,
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub time: f64,
+    pub n: f64,
+    pub e: f64,
+    pub alt: f64,
+    // pub latitude: Option<f64>,
+    // pub longitude: Option<f64>,
+    // pub altitude: Option<f64>,
+    // pub speed: Option<f64>,
+    // pub acceleration_x: f64,
+    // pub acceleration_y: f64,
+    // pub acceleration_z: f64,
+    // pub gyro_x: f64,
+    // pub gyro_y: f64,
+    // pub gyro_z: f64,
+    // pub magneto_x: Option<f64>,
+    // pub magneto_y: Option<f64>,
+    // pub magneto_z: Option<f64>,
 }
 
 impl State {
@@ -60,15 +73,15 @@ impl State {
     }
 
     pub fn update_gyro(&mut self, gyro: Vector3<f64>, duration: Duration) {
-        // -gy, -gx, gz
-        // -ay, -ax, az
+        //  gx, -gx, -gz
+        //  ax, -ay, az
         //  mx,  my, mz
-        let gyro = UnitQuaternion::from_euler_angles(-gyro.y * duration.as_secs_f64(), -gyro.x * duration.as_secs_f64(), gyro.z * duration.as_secs_f64());
+        let gyro = UnitQuaternion::from_euler_angles(gyro.x * duration.as_secs_f64(), -gyro.y * duration.as_secs_f64(), -gyro.z * duration.as_secs_f64());
         self.orientation = gyro * self.orientation;
     }
 
     pub fn update_accel(&mut self, accel: Vector3<f64>, fix: f64, update: f64) {
-        let accel = Vector3::new(-accel.y, -accel.x, accel.z);
+        let accel = Vector3::new(accel.y, -accel.y, accel.z);
         let world = self.orientation * accel;
         let rotation = UnitQuaternion::rotation_between(&world, &self.gravity).unwrap();
         self.gravity_angle = rotation.angle();
@@ -79,6 +92,7 @@ impl State {
     }
 
     pub fn update_magneto(&mut self, magento: Vector3<f64>, fix: f64, update: f64) {
+        let magneto = Vector3::new(-magento.x, -magento.y, magento.z);
         let world = self.orientation * magento;
         let rotation = UnitQuaternion::rotation_between(&world, &self.magneto).unwrap();
         self.magneto_angle = rotation.angle();
